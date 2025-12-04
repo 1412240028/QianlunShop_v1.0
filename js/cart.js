@@ -3,6 +3,7 @@
 // =========================
 
 import { showToast } from "./ui.js";
+import { Sanitizer } from "./security.js";
 
 // =========================
 // 🛒 Cart Class
@@ -484,11 +485,19 @@ export function initCartPage() {
     const items = cart.getItems();
     console.log("📦 Cart items:", items);
 
+    // ✅ Sanitize user data to prevent XSS
+    const sanitizedItems = items.map(item => ({
+      ...item,
+      name: Sanitizer.sanitizeInput(item.name),
+      image: Sanitizer.sanitizeInput(item.image),
+      id: Sanitizer.sanitizeInput(item.id)
+    }));
+
     // ✅ Clear entire container first
     cartContainer.innerHTML = '';
 
     // ✅ Show empty state if no items (no header for empty cart)
-    if (items.length === 0) {
+    if (sanitizedItems.length === 0) {
       const emptyCart = document.createElement('div');
       emptyCart.className = 'empty-cart';
       emptyCart.id = 'emptyCart';
@@ -514,7 +523,7 @@ export function initCartPage() {
     // ✅ Create cart items section
     const cartItemsSection = document.createElement('div');
     cartItemsSection.id = 'cartItems';
-    cartItemsSection.innerHTML = items.map(item => `
+    cartItemsSection.innerHTML = sanitizedItems.map(item => `
       <div class="cart-item">
         <img src="${item.image}" alt="${item.name}" onerror="this.src='../assets/sample1.jpg'">
         <div class="cart-info">

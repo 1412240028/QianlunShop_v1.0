@@ -25,6 +25,8 @@ const STATIC_ASSETS = [
   '/js/ui.js',
   '/js/products.js',
   '/js/checkout.js',
+  '/js/security.js',
+  '/js/error-handler.js',
   '/assets/images/icons/QianLun Alphabet.png',
   '/assets/images/icons/QianLun Dragon.png',
   '/manifest.json'

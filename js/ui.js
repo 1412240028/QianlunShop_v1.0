@@ -4,150 +4,427 @@
 // =========================
 import { CONFIG } from "./config.js";
 
-// ======================================
-// 🍞 TOAST MANAGER - Multiple Toast Support
-// ======================================
-class ToastManager {
-    constructor() {
-      this.container = null;
-      this.toasts = [];
-      this.maxToasts = 3;
-      this.init();
-    }
-    
-    init() {
-      // Create container if not exists
-      if (!document.getElementById('toast-container')) {
-        this.container = document.createElement('div');
-        this.container.id = 'toast-container';
+// =========================
+// 🍞 ENHANCED TOAST NOTIFICATION SYSTEM - QIANLUNSHOP
+// Premium luxury-themed notifications with glassmorphism
+// =========================
+
+class LuxuryToastManager {
+  constructor() {
+    this.container = null;
+    this.toasts = [];
+    this.maxToasts = 3;
+    this.init();
+  }
+
+  init() {
+    // Create container if not exists
+    if (!document.getElementById('luxury-toast-container')) {
+      this.container = document.createElement('div');
+      this.container.id = 'luxury-toast-container';
       this.container.style.cssText = `
         position: fixed;
-        top: 20px;
+        top: 90px;
         right: 20px;
-        z-index: ${CONFIG.Z_INDEX.TOAST};
+        z-index: 10000;
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 12px;
         pointer-events: none;
+        max-width: 420px;
       `;
-        document.body.appendChild(this.container);
-      } else {
-        this.container = document.getElementById('toast-container');
-      }
+      document.body.appendChild(this.container);
+    } else {
+      this.container = document.getElementById('luxury-toast-container');
     }
-    
-    show(message, type = 'info', duration = 3000) {
-      // Remove oldest toast if max reached
-      if (this.toasts.length >= this.maxToasts) {
-        const oldest = this.toasts.shift();
-        this.remove(oldest.element);
+
+    // Inject styles
+    this.injectStyles();
+  }
+
+  injectStyles() {
+    if (document.getElementById('luxury-toast-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'luxury-toast-styles';
+    style.textContent = `
+      /* Base Toast Styles */
+      .luxury-toast {
+        position: relative;
+        display: flex;
+        align-items: flex-start;
+        gap: 14px;
+        padding: 18px 22px;
+        border-radius: 14px;
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.25),
+          0 0 0 1px rgba(212, 175, 55, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1);
+        pointer-events: auto;
+        transform: translateX(450px);
+        opacity: 0;
+        transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        overflow: hidden;
+        min-width: 320px;
+        max-width: 420px;
       }
-      
-      const toast = this.createToast(message, type);
-      const toastObj = { element: toast, timeout: null };
-      this.toasts.push(toastObj);
-      
-      // Auto-remove after duration
+
+      .luxury-toast.show {
+        transform: translateX(0);
+        opacity: 1;
+      }
+
+      .luxury-toast.hide {
+        transform: translateX(450px);
+        opacity: 0;
+      }
+
+      /* Toast Types */
+      .luxury-toast.success {
+        background: linear-gradient(135deg,
+          rgba(212, 175, 55, 0.15) 0%,
+          rgba(16, 185, 129, 0.15) 100%);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+      }
+
+      .luxury-toast.error {
+        background: linear-gradient(135deg,
+          rgba(212, 175, 55, 0.15) 0%,
+          rgba(239, 68, 68, 0.15) 100%);
+        border: 1px solid rgba(239, 68, 68, 0.3);
+      }
+
+      .luxury-toast.warning {
+        background: linear-gradient(135deg,
+          rgba(212, 175, 55, 0.15) 0%,
+          rgba(245, 158, 11, 0.15) 100%);
+        border: 1px solid rgba(245, 158, 11, 0.3);
+      }
+
+      .luxury-toast.info {
+        background: linear-gradient(135deg,
+          rgba(212, 175, 55, 0.15) 0%,
+          rgba(59, 130, 246, 0.15) 100%);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+      }
+
+      /* Toast Icon */
+      .luxury-toast-icon {
+        font-size: 26px;
+        line-height: 1;
+        flex-shrink: 0;
+        filter: drop-shadow(0 2px 8px rgba(212, 175, 55, 0.3));
+        animation: toastIconPop 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      }
+
+      @keyframes toastIconPop {
+        0% { transform: scale(0) rotate(-180deg); opacity: 0; }
+        50% { transform: scale(1.2) rotate(10deg); }
+        100% { transform: scale(1) rotate(0deg); opacity: 1; }
+      }
+
+      /* Toast Content */
+      .luxury-toast-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
+
+      .luxury-toast-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 16px;
+        font-weight: 600;
+        color: #d4af37;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        margin: 0;
+        line-height: 1.3;
+      }
+
+      .luxury-toast-message {
+        font-family: 'Inter', sans-serif;
+        font-size: 14px;
+        color: #e8e8e8;
+        line-height: 1.5;
+        margin: 0;
+        opacity: 0.95;
+      }
+
+      /* Close Button */
+      .luxury-toast-close {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        color: #d4af37;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        cursor: pointer;
+        font-size: 18px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+        flex-shrink: 0;
+        padding: 0;
+      }
+
+      .luxury-toast-close:hover {
+        background: rgba(212, 175, 55, 0.2);
+        border-color: #d4af37;
+        transform: rotate(90deg) scale(1.1);
+        box-shadow: 0 4px 12px rgba(212, 175, 55, 0.3);
+      }
+
+      .luxury-toast-close:active {
+        transform: rotate(90deg) scale(0.95);
+      }
+
+      /* Progress Bar */
+      .luxury-toast-progress {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        height: 3px;
+        background: linear-gradient(90deg, #d4af37, #f4d03f);
+        width: 100%;
+        transform-origin: left;
+        animation: toastProgress linear forwards;
+        border-radius: 0 0 14px 14px;
+        box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);
+      }
+
+      @keyframes toastProgress {
+        from { transform: scaleX(1); }
+        to { transform: scaleX(0); }
+      }
+
+      /* Mobile Responsive */
+      @media (max-width: 768px) {
+        #luxury-toast-container {
+          top: 80px;
+          right: 10px;
+          left: 10px;
+          max-width: none;
+        }
+
+        .luxury-toast {
+          min-width: auto;
+          max-width: none;
+          padding: 16px 20px;
+        }
+
+        .luxury-toast-icon {
+          font-size: 22px;
+        }
+
+        .luxury-toast-title {
+          font-size: 15px;
+        }
+
+        .luxury-toast-message {
+          font-size: 13px;
+        }
+      }
+
+      /* Hover Effects */
+      .luxury-toast:hover {
+        transform: translateX(-4px);
+        box-shadow:
+          0 12px 40px rgba(0, 0, 0, 0.3),
+          0 0 0 1px rgba(212, 175, 55, 0.4),
+          inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      }
+
+      .luxury-toast:hover .luxury-toast-progress {
+        animation-play-state: paused;
+      }
+
+      /* Glow Effect for Success */
+      .luxury-toast.success {
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.25),
+          0 0 0 1px rgba(212, 175, 55, 0.2),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          0 0 20px rgba(16, 185, 129, 0.2);
+      }
+
+      /* Glow Effect for Error */
+      .luxury-toast.error {
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.25),
+          0 0 0 1px rgba(239, 68, 68, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          0 0 20px rgba(239, 68, 68, 0.2);
+      }
+
+      /* Glow Effect for Warning */
+      .luxury-toast.warning {
+        box-shadow:
+          0 8px 32px rgba(0, 0, 0, 0.25),
+          0 0 0 1px rgba(245, 158, 11, 0.3),
+          inset 0 1px 0 rgba(255, 255, 255, 0.1),
+          0 0 20px rgba(245, 158, 11, 0.2);
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  show(message, type = 'success', duration = 4000, title = null) {
+    // Remove oldest if max reached
+    if (this.toasts.length >= this.maxToasts) {
+      const oldest = this.toasts.shift();
+      this.remove(oldest.element, true);
+    }
+
+    const toast = this.createToast(message, type, duration, title);
+    const toastObj = { element: toast, timeout: null };
+    this.toasts.push(toastObj);
+
+    // Trigger show animation
+    requestAnimationFrame(() => {
+      toast.classList.add('show');
+    });
+
+    // Auto-remove after duration
+    if (duration > 0) {
       toastObj.timeout = setTimeout(() => {
         this.remove(toast);
       }, duration);
-      
-      return toast;
     }
-    
-    createToast(message, type) {
-      const icons = {
-        success: '✅',
-        error: '❌',
-        warning: '⚠️',
-        info: 'ℹ️'
-      };
-      
-      const toast = document.createElement('div');
-      toast.className = `toast toast-${type}`;
-      toast.style.cssText = `
-        background: ${type === 'success' ? '#10b981' : 
-                     type === 'error' ? '#ef4444' : 
-                     type === 'warning' ? '#f59e0b' : '#3b82f6'};
-        color: white;
-        padding: 12px 20px;
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        pointer-events: auto;
-        transform: translateX(400px);
-        transition: transform 0.3s ease;
-        max-width: 350px;
-      `;
-      
-      toast.innerHTML = `
-        <span style="font-size: 20px;">${icons[type] || 'ℹ️'}</span>
-        <span style="flex: 1; font-weight: 500;">${message}</span>
-        <button class="toast-close" style="
-          background: rgba(255,255,255,0.2);
-          border: none;
-          color: white;
-          width: 24px;
-          height: 24px;
-          border-radius: 50%;
-          cursor: pointer;
-          font-size: 16px;
-          line-height: 1;
-        ">×</button>
-      `;
-      
-      // Close button handler
-      const closeBtn = toast.querySelector('.toast-close');
-      closeBtn.addEventListener('click', () => this.remove(toast));
-      
-      this.container.appendChild(toast);
-      
-      // Trigger animation
-      setTimeout(() => {
-        toast.style.transform = 'translateX(0)';
-      }, 10);
-      
-      return toast;
-    }
-    
-    remove(toastElement) {
-      const index = this.toasts.findIndex(t => t.element === toastElement);
-      
-      if (index > -1) {
-        const toastObj = this.toasts[index];
-        clearTimeout(toastObj.timeout);
-        this.toasts.splice(index, 1);
-        
-        toastElement.style.transform = 'translateX(400px)';
+
+    return toast;
+  }
+
+  createToast(message, type, duration, title) {
+    const icons = {
+      success: '✨',
+      error: '⚠️',
+      warning: '🔔',
+      info: 'ℹ️'
+    };
+
+    const titles = {
+      success: title || 'Berhasil!',
+      error: title || 'Terjadi Kesalahan',
+      warning: title || 'Perhatian',
+      info: title || 'Informasi'
+    };
+
+    const toast = document.createElement('div');
+    toast.className = `luxury-toast ${type}`;
+
+    toast.innerHTML = `
+      <div class="luxury-toast-icon">${icons[type] || '✨'}</div>
+      <div class="luxury-toast-content">
+        <h4 class="luxury-toast-title">${titles[type]}</h4>
+        <p class="luxury-toast-message">${message}</p>
+      </div>
+      <button class="luxury-toast-close" aria-label="Close">×</button>
+      ${duration > 0 ? `<div class="luxury-toast-progress" style="animation-duration: ${duration}ms;"></div>` : ''}
+    `;
+
+    // Close button handler
+    const closeBtn = toast.querySelector('.luxury-toast-close');
+    closeBtn.addEventListener('click', () => this.remove(toast));
+
+    // Pause progress on hover
+    toast.addEventListener('mouseenter', () => {
+      const progress = toast.querySelector('.luxury-toast-progress');
+      if (progress) {
+        progress.style.animationPlayState = 'paused';
+      }
+    });
+
+    toast.addEventListener('mouseleave', () => {
+      const progress = toast.querySelector('.luxury-toast-progress');
+      if (progress) {
+        progress.style.animationPlayState = 'running';
+      }
+    });
+
+    this.container.appendChild(toast);
+
+    return toast;
+  }
+
+  remove(toastElement, instant = false) {
+    const index = this.toasts.findIndex(t => t.element === toastElement);
+
+    if (index > -1) {
+      const toastObj = this.toasts[index];
+      clearTimeout(toastObj.timeout);
+      this.toasts.splice(index, 1);
+
+      if (instant) {
+        toastElement.remove();
+      } else {
+        toastElement.classList.remove('show');
+        toastElement.classList.add('hide');
+
         setTimeout(() => {
           if (toastElement.parentNode) {
             toastElement.remove();
           }
-        }, 300);
+        }, 400);
       }
     }
-    
-    clear() {
-      this.toasts.forEach(t => {
-        clearTimeout(t.timeout);
-        t.element.remove();
-      });
-      this.toasts = [];
-    }
   }
-  
-  // Create singleton instance
-  const toastManagerInstance = new ToastManager();
-  
-  // Export function (backward compatible)
-  export function showToast(message, type = "success") {
-    return toastManagerInstance.show(message, type, 3000);
+
+  clear() {
+    this.toasts.forEach(t => {
+      clearTimeout(t.timeout);
+      t.element.remove();
+    });
+    this.toasts = [];
   }
-  
-  // Export manager for advanced usage
-  export { toastManagerInstance as toastManager };
+
+  // Shorthand methods
+  success(message, duration = 4000, title = null) {
+    return this.show(message, 'success', duration, title);
+  }
+
+  error(message, duration = 5000, title = null) {
+    return this.show(message, 'error', duration, title);
+  }
+
+  warning(message, duration = 4500, title = null) {
+    return this.show(message, 'warning', duration, title);
+  }
+
+  info(message, duration = 4000, title = null) {
+    return this.show(message, 'info', duration, title);
+  }
+}
+
+// =========================
+// 🚀 INITIALIZE & EXPORT
+// =========================
+
+// Create singleton instance
+const luxuryToast = new LuxuryToastManager();
+
+// Export for ES6 modules
+export function showToast(message, type = 'success', duration = 4000, title = null) {
+  return luxuryToast.show(message, type, duration, title);
+}
+
+export { luxuryToast as toastManager, LuxuryToastManager };
+
+// Make globally available (for non-module environments)
+if (typeof window !== 'undefined') {
+  window.luxuryToast = luxuryToast;
+  window.showToast = showToast;
+}
+
+console.log('✨ Luxury Toast System loaded');
 
 // =========================
 // 🛒 Update Navbar Cart Count
