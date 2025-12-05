@@ -1,784 +1,232 @@
-buat file baru bernama: order-confirmation.js
-isi nya :
-// =========================
-// 📦 ORDER CONFIRMATION MODULE - COMPLETE FIXED
-// =========================
-
-import { Utils } from "./config.js";
-import { showToast } from "./ui.js";
-
-/**
- * Initialize Order Confirmation Page
- */
-export function initOrderConfirmation() {
-  console.log("📦 Initializing Order Confirmation...");
-
-  const confirmationContainer = document.querySelector('.order-confirmation');
-  
-  if (!confirmationContainer) {
-    console.log("ℹ️ Not on order confirmation page");
-    return;
-  }
-
-  // Show loading state
-  confirmationContainer.innerHTML = `
-    <div class="confirmation-loading">
-      <div class="loading-spinner"></div>
-      <p>Memuat data pesanan...</p>
-    </div>
-  `;
-
-  // Get order data with small delay to ensure localStorage is ready
-  setTimeout(() => {
-    const orderData = getOrderData();
-
-    if (!orderData || !orderData.orderId) {
-      console.warn("⚠️ No order data found");
-      renderErrorState(confirmationContainer);
-      return;
-    }
-
-    console.log("✅ Order data found:", orderData);
-    renderOrderConfirmation(confirmationContainer, orderData);
-    
-    // Clear cart after showing confirmation
-    clearCart();
-    
-    showToast('🎉 Pesanan berhasil dibuat!', 'success');
-  }, 500);
-}
-
-/**
- * Get order data from localStorage
- */
-function getOrderData() {
-  try {
-    const orderData = Utils.loadFromStorage('qianlunshop_last_order', null);
-    
-    if (!orderData) {
-      console.warn("⚠️ No order data in localStorage");
-      return null;
-    }
-
-    console.log("📦 Raw order data:", orderData);
-
-    // Mark as viewed
-    if (!orderData.viewed) {
-      orderData.viewed = true;
-      orderData.viewedAt = Date.now();
-      Utils.saveToStorage('qianlunshop_last_order', orderData);
-    }
-
-    // Save to order history
-    saveToOrderHistory(orderData);
-
-    return orderData;
-  } catch (error) {
-    console.error("❌ Error loading order data:", error);
-    return null;
-  }
-}
-
-/**
- * Save order to history
- */
-function saveToOrderHistory(orderData) {
-  try {
-    const orders = Utils.loadFromStorage('qianlunshop_orders', []);
-    
-    const exists = orders.some(order => order.orderId === orderData.orderId);
-    
-    if (!exists) {
-      orders.push({
-        ...orderData,
-        savedAt: Date.now()
-      });
-      
-      Utils.saveToStorage('qianlunshop_orders', orders);
-      console.log("💾 Order saved to history");
-    }
-  } catch (error) {
-    console.error("❌ Error saving to history:", error);
-  }
-}
-
-/**
- * Clear cart after successful order
- */
-function clearCart() {
-  try {
-    localStorage.removeItem('qianlunshop_cart');
-    console.log("🗑️ Cart cleared");
-  } catch (error) {
-    console.error("❌ Error clearing cart:", error);
-  }
-}
-
-/**
- * Render order confirmation UI
- */
-function renderOrderConfirmation(container, orderData) {
-  const confirmationHTML = `
-    <div class="confirmation-icon" role="img" aria-label="Success">✓</div>
-    
-    <h2>Pesanan Anda Telah Berhasil Dikonfirmasi!</h2>
-
-    <p class="order-id">
-      <strong>ID Pesanan:</strong> ${orderData.orderId}
-    </p>
-
-    <p class="confirmation-message">
-      Terima kasih telah berbelanja di QianlunShop. Kami telah mengirimkan detail 
-      pesanan lengkap ke alamat email <strong>${orderData.customerEmail}</strong>. 
-      Harap tunggu informasi pengiriman.
-    </p>
-
-    <div class="confirmation-details">
-      <div class="detail-item">
-        <strong>Tanggal Pesanan:</strong>
-        <span>${orderData.date || formatDate(new Date())}</span>
-      </div>
-      
-      <div class="detail-item">
-        <strong>Metode Pembayaran:</strong>
-        <span>${orderData.paymentMethod || 'N/A'}</span>
-      </div>
-      
-      <div class="detail-item">
-        <strong>Alamat Pengiriman:</strong>
-        <span>${orderData.shippingAddress || 'N/A'}</span>
-      </div>
-      
-      <div class="detail-item">
-        <strong>Total Pembayaran:</strong>
-        <span class="total-amount">${Utils.formatPrice(orderData.total)}</span>
-      </div>
-    </div>
-
-    ${orderData.items && orderData.items.length > 0 ? `
-      <div class="order-items-summary">
-        <h3>Produk yang Dibeli (${orderData.items.length} item)</h3>
-        <div class="items-list">
-          ${renderOrderItems(orderData.items)}
-        </div>
-      </div>
-    ` : ''}
-
-    <div class="confirmation-actions">
-      <a href="../index.html" class="btn btn-primary">🏠 Kembali ke Beranda</a>
-      <a href="products.html" class="btn btn-secondary">🛍️ Belanja Lagi</a>
-      <button class="btn btn-outline" onclick="window.print()">🖨️ Cetak Invoice</button>
-    </div>
-
-    <div class="order-tracking-info">
-      <p>📦 <strong>Lacak Pesanan Anda</strong></p>
-      <p>Gunakan ID pesanan <code>${orderData.orderId}</code> untuk melacak status pengiriman</p>
-    </div>
-  `;
-
-  container.innerHTML = confirmationHTML;
-  
-  addPrintStyles();
-}
-
-/**
- * Render order items list
- */
-function renderOrderItems(items) {
-  if (!items || !Array.isArray(items) || items.length === 0) {
-    return '<p class="no-items">Tidak ada item dalam pesanan</p>';
-  }
-
-  console.log("🛍️ Rendering items:", items);
-
-  return items.map((item, index) => {
-    const itemName = item.name || 'Produk Tanpa Nama';
-    const itemPrice = item.price || 0;
-    const itemQty = item.quantity || 1;
-    const itemImage = item.image || '../assets/placeholder.jpg';
-    const itemSubtotal = itemPrice * itemQty;
-
-    return `
-      <div class="order-item" data-index="${index}">
-        <img src="${itemImage}" alt="${itemName}" onerror="this.src='../assets/placeholder.jpg'">
-        <div class="item-details">
-          <h4>${itemName}</h4>
-          <p>Jumlah: ${itemQty} × ${Utils.formatPrice(itemPrice)}</p>
-        </div>
-        <div class="item-subtotal">
-          ${Utils.formatPrice(itemSubtotal)}
-        </div>
-      </div>
-    `;
-  }).join('');
-}
-
-/**
- * Render error state
- */
-function renderErrorState(container) {
-  container.innerHTML = `
-    <div class="confirmation-icon error-icon" role="img" aria-label="Error">❌</div>
-    
-    <h2>Oops! Data Pesanan Tidak Ditemukan</h2>
-    
-    <p class="error-message">
-      Maaf, kami tidak dapat menemukan data pesanan Anda. 
-      Kemungkinan sesi telah berakhir atau terjadi kesalahan.
-    </p>
-
-    <div class="confirmation-actions">
-      <a href="../index.html" class="btn btn-primary">🏠 Kembali ke Beranda</a>
-      <a href="products.html" class="btn btn-secondary">🛍️ Mulai Belanja</a>
-      <a href="contact.html" class="btn btn-outline">📞 Hubungi Kami</a>
-    </div>
-
-    <div class="help-info">
-      <p>💡 <strong>Butuh Bantuan?</strong></p>
-      <p>Hubungi kami di <a href="mailto:hello@qianlunshop.com">hello@qianlunshop.com</a></p>
-      <p>atau WhatsApp: <a href="https://wa.me/6281234567890">+62 812-3456-7890</a></p>
-    </div>
-  `;
-}
-
-/**
- * Format date helper
- */
-function formatDate(date) {
-  try {
-    return new Intl.DateTimeFormat('id-ID', {
-      weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    }).format(date);
-  } catch (error) {
-    console.error("❌ Date format error:", error);
-    return date.toLocaleDateString('id-ID');
-  }
-}
-
-/**
- * Add print styles
- */
-function addPrintStyles() {
-  if (document.getElementById('print-styles')) return;
-
-  const style = document.createElement('style');
-  style.id = 'print-styles';
-  style.textContent = `
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      
-      .order-confirmation,
-      .order-confirmation * {
-        visibility: visible;
-      }
-      
-      .order-confirmation {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-      }
-      
-      .confirmation-actions,
-      .navbar,
-      footer {
-        display: none !important;
-      }
-      
-      .confirmation-icon {
-        font-size: 3rem;
-      }
-      
-      @page {
-        margin: 2cm;
-      }
-    }
-  `;
-  
-  document.head.appendChild(style);
-}
-
-// =========================
-// 🎯 DEBUG HELPER
-// =========================
-export function debugOrderConfirmation() {
-  console.log("=== ORDER CONFIRMATION DEBUG ===");
-  
-  const orderData = Utils.loadFromStorage('qianlunshop_last_order', null);
-  const orderHistory = Utils.loadFromStorage('qianlunshop_orders', []);
-  const cart = Utils.loadFromStorage('qianlunshop_cart', []);
-  
-  const debugInfo = {
-    'Last Order Exists': orderData ? '✅ YES' : '❌ NO',
-    'Order ID': orderData?.orderId || 'N/A',
-    'Order Date': orderData?.date || 'N/A',
-    'Total': orderData?.total ? Utils.formatPrice(orderData.total) : 'N/A',
-    'Email': orderData?.customerEmail || 'N/A',
-    'Items Count': orderData?.items?.length || 0,
-    'History Count': orderHistory.length,
-    'Cart Items': cart.length
-  };
-  
-  console.table(debugInfo);
-  console.log("\n📦 Full Order Data:");
-  console.log(orderData);
-  console.log("\n📜 Order History:");
-  console.log(orderHistory);
-  console.log("\n🛒 Current Cart:");
-  console.log(cart);
-  console.log("================================");
-  
-  return { orderData, orderHistory, cart };
-}
-
-// Make debug globally accessible
-if (typeof window !== 'undefined') {
-  window.debugOrderConfirmation = debugOrderConfirmation;
-}
-
-console.log("✅ Order Confirmation module loaded");
-
-import dan export agar terintegrasi dan tersambung dengan semua file.
-
-perbaiki order confirmation css dengan code ini:
-/* =========================
-   QianlunShop - Order Confirmation Page (FIXED)
-   ========================= */
-
-/* Container */
-.order-confirmation-section {
-  min-height: 80vh;
-  padding: 140px 2rem 4rem;
-  background: linear-gradient(135deg, #0a0a0a, #1c1c1c);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Loading State */
-.confirmation-loading {
-  text-align: center;
-  padding: 3rem;
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 3px solid rgba(212, 175, 55, 0.3);
-  border-top: 3px solid var(--gold-primary);
-  border-radius: 50%;
-  margin: 0 auto 20px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.confirmation-loading p {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-}
-
-.order-confirmation {
-  text-align: center;
-  max-width: 800px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 3rem 2rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  border-radius: 20px;
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  animation: fadeInUp 0.8s ease forwards;
-}
-
-/* Success Icon */
-.confirmation-icon {
-  font-size: 5rem;
-  margin-bottom: 2rem;
-  display: inline-block;
-  width: 120px;
-  height: 120px;
-  line-height: 120px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(46, 204, 113, 0.2));
-  border: 3px solid var(--gold-primary);
-  border-radius: 50%;
-  color: var(--gold-primary);
-  animation: iconBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3);
-}
-
-.confirmation-icon.error-icon {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(231, 76, 60, 0.2));
-  border-color: var(--error);
-  color: var(--error);
-}
-
-@keyframes iconBounce {
-  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-  50% { transform: scale(1.2) rotate(10deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-/* Title */
-.order-confirmation h2 {
-  font-family: var(--font-heading);
-  color: var(--gold-primary);
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  letter-spacing: 1px;
-  text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-}
-
-/* Order ID */
-.order-id {
-  font-size: 1.2rem;
-  color: var(--text-light);
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: rgba(212, 175, 55, 0.1);
-  border-radius: 10px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-}
-
-.order-id strong {
-  color: var(--gold-accent);
-}
-
-/* Confirmation Message */
-.confirmation-message {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1.8;
-  margin-bottom: 3rem;
-}
-
-.confirmation-message strong {
-  color: var(--gold-accent);
-  font-weight: 600;
-}
-
-/* Confirmation Details */
-.confirmation-details {
-  text-align: left;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px dashed rgba(212, 175, 55, 0.1);
-  color: var(--text-light);
-  transition: all 0.3s ease;
-}
-
-.detail-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.detail-item:hover {
-  transform: translateX(5px);
-  color: var(--gold-accent);
-}
-
-.detail-item strong {
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.detail-item span {
-  color: var(--text-light);
-  text-align: right;
-  max-width: 60%;
-  word-wrap: break-word;
-}
-
-.detail-item .total-amount {
-  color: var(--gold-accent);
-  font-weight: 700;
-  font-size: 1.3rem;
-  text-shadow: 0 0 10px rgba(244, 208, 63, 0.3);
-}
-
-/* Order Items Summary */
-.order-items-summary {
-  margin: 2.5rem 0;
-  text-align: left;
-}
-
-.order-items-summary h3 {
-  font-family: var(--font-heading);
-  color: var(--gold-primary);
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.15);
-}
-
-.items-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.items-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-}
-
-.items-list::-webkit-scrollbar-thumb {
-  background: var(--gold-primary);
-  border-radius: 10px;
-}
-
-.order-item {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.order-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);
-  border-color: rgba(212, 175, 55, 0.3);
-}
-
-.order-item img {
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid rgba(212, 175, 55, 0.3);
-}
-
-.order-item .item-details {
-  flex: 1;
-}
-
-.order-item h4 {
-  color: var(--text-light);
-  font-size: 1rem;
-  margin-bottom: 0.4rem;
-  font-weight: 600;
-}
-
-.order-item p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.order-item .item-subtotal {
-  color: var(--gold-accent);
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.no-items {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 2rem;
-  font-style: italic;
-}
-
-/* Actions */
-.confirmation-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 2.5rem;
-}
-
-.confirmation-actions .btn {
-  min-width: 180px;
-}
-
-/* Order Tracking Info */
-.order-tracking-info {
-  margin-top: 3rem;
-  padding: 1.5rem;
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 12px;
-}
-
-.order-tracking-info p {
-  color: var(--text-light);
-  margin-bottom: 0.5rem;
-  line-height: 1.6;
-}
-
-.order-tracking-info p:last-child {
-  margin-bottom: 0;
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
-/* Help Info */
-.help-info {
-  margin-top: 2.5rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  border-radius: 12px;
-}
-
-.help-info p {
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-  line-height: 1.6;
-}
-
-.help-info a {
-  color: var(--gold-accent);
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.help-info a:hover {
-  color: var(--gold-primary);
-  text-decoration: underline;
-}
-
-/* Error Message */
-.error-message {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1.8;
-  margin-bottom: 3rem;
-  padding: 1.5rem;
-  background: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
-  border-radius: 10px;
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-  .order-confirmation-section {
-    padding: 100px 1rem 2rem;
-  }
-
-  .order-confirmation {
-    padding: 2rem 1.5rem;
-  }
-
-  .confirmation-icon {
-    font-size: 4rem;
-    width: 100px;
-    height: 100px;
-    line-height: 100px;
-  }
-
-  .order-confirmation h2 {
-    font-size: 1.8rem;
-  }
-
-  .confirmation-message {
-    font-size: 1rem;
-  }
-
-  .confirmation-details {
-    padding: 1.5rem;
-  }
-
-  .detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .detail-item span {
-    max-width: 100%;
-    text-align: left;
-  }
-
-  .confirmation-actions {
-    flex-direction: column;
-  }
-
-  .confirmation-actions .btn {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .order-item {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .order-item img {
-    width: 80px;
-    height: 80px;
-  }
-}
-
-/* Print Styles */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  
-  .order-confirmation,
-  .order-confirmation * {
-    visibility: visible;
-  }
-  
-  .order-confirmation {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-  
-  .confirmation-actions,
-  .navbar,
-  footer,
-  .order-tracking-info {
-    display: none !important;
-  }
-  
-  .confirmation-icon {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-  
-  @page {
-    margin: 2cm;
-  }
-}
+# QianlunShop Future Enhancements Plan
+
+## Overview
+This document outlines the planned future enhancements for QianlunShop, a modern e-commerce platform. The enhancements are categorized into 6 major options, each focusing on different aspects of the application.
+
+## Current Project State
+- Frontend-only e-commerce site built with HTML, CSS, JavaScript
+- Local storage-based cart and order management
+- Static product data from JSON files
+- No backend, authentication, or payment processing
+- Responsive design with modern UI/UX
+
+## Enhancement Options
+
+### Opsi 1: Backend Integration 🗄️
+**Priority: High** - Foundation for other features
+
+#### Sub-tasks:
+- [ ] Setup Node.js + Express server
+- [ ] Configure project structure (backend/ folder)
+- [ ] Install dependencies (express, cors, dotenv, etc.)
+- [ ] Create basic server setup with middleware
+- [ ] Design database schema (MongoDB/PostgreSQL)
+- [ ] Create database models (User, Product, Order, etc.)
+- [ ] Implement REST API endpoints:
+  - [ ] Products CRUD (/api/products)
+  - [ ] Orders CRUD (/api/orders)
+  - [ ] User management (/api/users)
+- [ ] Connect frontend to backend APIs
+- [ ] Migrate localStorage data to API calls
+- [ ] Update existing JS modules to use API
+
+#### Dependencies:
+- Node.js installed
+- Database (MongoDB recommended)
+- Environment variables setup
+
+#### Estimated Time: 4-6 weeks
+
+---
+
+### Opsi 2: Payment Gateway 💳
+**Priority: High** - Core e-commerce functionality
+
+#### Prerequisites:
+- Backend Integration (Option 1) completed
+
+#### Sub-tasks:
+- [ ] Research and setup Midtrans account
+- [ ] Install Midtrans SDK
+- [ ] Create payment service module
+- [ ] Implement payment flow:
+  - [ ] Payment initiation
+  - [ ] Redirect to Midtrans Snap
+  - [ ] Handle payment callbacks
+- [ ] Add transaction logging to database
+- [ ] Implement payment verification
+- [ ] Update checkout process to use real payments
+- [ ] Add payment status tracking
+- [ ] Handle failed payments and retries
+
+#### Dependencies:
+- Midtrans merchant account
+- Backend API for orders
+- Secure environment for API keys
+
+#### Estimated Time: 2-3 weeks
+
+---
+
+### Opsi 3: Authentication System 🔐
+**Priority: Medium** - User management
+
+#### Prerequisites:
+- Backend Integration (Option 1) completed
+
+#### Sub-tasks:
+- [ ] Design user authentication flow
+- [ ] Implement user registration API
+- [ ] Implement user login API
+- [ ] Setup JWT token system
+- [ ] Create authentication middleware
+- [ ] Add protected routes
+- [ ] Implement session management
+- [ ] Create login/register UI components
+- [ ] Update existing pages to handle auth state
+- [ ] Add logout functionality
+- [ ] Implement password reset (optional)
+
+#### Dependencies:
+- User model in database
+- JWT library (jsonwebtoken)
+- Secure token storage
+
+#### Estimated Time: 2-4 weeks
+
+---
+
+### Opsi 4: Admin Panel ⚙️
+**Priority: Medium** - Business management
+
+#### Prerequisites:
+- Backend Integration (Option 1)
+- Authentication System (Option 3)
+
+#### Sub-tasks:
+- [ ] Create admin dashboard UI
+- [ ] Implement product CRUD operations:
+  - [ ] Add new products
+  - [ ] Edit existing products
+  - [ ] Delete products
+  - [ ] Bulk operations
+- [ ] Order management system:
+  - [ ] View all orders
+  - [ ] Update order status
+  - [ ] Order filtering/search
+- [ ] User management:
+  - [ ] View users
+  - [ ] User roles/permissions
+  - [ ] User activity logs
+- [ ] Dashboard analytics:
+  - [ ] Sales charts
+  - [ ] Order statistics
+  - [ ] User metrics
+  - [ ] Revenue reports
+
+#### Dependencies:
+- Admin role in authentication
+- Charts library (Chart.js)
+- File upload for product images
+
+#### Estimated Time: 3-5 weeks
+
+---
+
+### Opsi 5: Testing 🧪
+**Priority: Medium** - Code quality assurance
+
+#### Sub-tasks:
+- [ ] Setup testing framework
+- [ ] Install Vitest for unit testing
+- [ ] Install Playwright for E2E testing
+- [ ] Create unit tests for:
+  - [ ] Utility functions
+  - [ ] Cart operations
+  - [ ] Form validations
+  - [ ] API calls (after backend)
+- [ ] Create E2E tests for:
+  - [ ] User registration/login
+  - [ ] Product browsing
+  - [ ] Cart functionality
+  - [ ] Checkout process
+  - [ ] Order confirmation
+- [ ] Setup test coverage reporting
+- [ ] Configure CI/CD pipeline for automated testing
+- [ ] Add testing scripts to package.json
+
+#### Dependencies:
+- Testing libraries installed
+- Test environment setup
+
+#### Estimated Time: 2-3 weeks
+
+---
+
+### Opsi 6: Performance ⚡
+**Priority: Low** - Optimization
+
+#### Sub-tasks:
+- [ ] Analyze current bundle size
+- [ ] Implement code splitting:
+  - [ ] Route-based splitting
+  - [ ] Component lazy loading
+- [ ] Optimize images:
+  - [ ] WebP format conversion
+  - [ ] Responsive images
+  - [ ] Lazy loading for images
+- [ ] Bundle optimization:
+  - [ ] Tree shaking
+  - [ ] Minification
+  - [ ] Compression
+- [ ] Performance monitoring:
+  - [ ] Lighthouse audits
+  - [ ] Core Web Vitals tracking
+- [ ] Caching strategies:
+  - [ ] Service worker updates
+  - [ ] API response caching
+
+#### Dependencies:
+- Build tools (Webpack/Vite)
+- Image optimization tools
+
+#### Estimated Time: 1-2 weeks
+
+## Implementation Strategy
+
+### Phase 1: Foundation (Weeks 1-6)
+1. Backend Integration (Option 1)
+2. Basic testing setup (Option 5 - partial)
+
+### Phase 2: Core Features (Weeks 7-12)
+1. Payment Gateway (Option 2)
+2. Authentication System (Option 3)
+
+### Phase 3: Management & Quality (Weeks 13-18)
+1. Admin Panel (Option 4)
+2. Complete testing suite (Option 5)
+
+### Phase 4: Optimization (Weeks 19-20)
+1. Performance optimizations (Option 6)
+
+## Risk Assessment
+- **High Risk**: Payment integration - requires careful testing
+- **Medium Risk**: Authentication - security implications
+- **Low Risk**: Testing and Performance - can be implemented incrementally
+
+## Success Metrics
+- All features functional and tested
+- Payment processing working correctly
+- Admin panel fully operational
+- Performance scores >90 on Lighthouse
+- Test coverage >80%
+
+## Next Steps
+1. Review and approve this plan
+2. Set up development environment for backend
+3. Begin with Option 1 implementation
+4. Regular progress updates and testing
+
+---
+*Last updated: [Current Date]*
+*Plan created for QianlunShop v1.0 enhancement*
