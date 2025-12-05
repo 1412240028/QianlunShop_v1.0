@@ -310,17 +310,17 @@ class LuxuryToastManager {
       warning: '🔔',
       info: 'ℹ️'
     };
-
+  
     const titles = {
       success: title || 'Berhasil!',
       error: title || 'Terjadi Kesalahan',
       warning: title || 'Perhatian',
       info: title || 'Informasi'
     };
-
+  
     const toast = document.createElement('div');
     toast.className = `luxury-toast ${type}`;
-
+  
     toast.innerHTML = `
       <div class="luxury-toast-icon">${icons[type] || '✨'}</div>
       <div class="luxury-toast-content">
@@ -328,30 +328,14 @@ class LuxuryToastManager {
         <p class="luxury-toast-message">${message}</p>
       </div>
       <button class="luxury-toast-close" aria-label="Close">×</button>
-      ${duration > 0 ? `<div class="luxury-toast-progress" style="animation-duration: ${duration}ms;"></div>` : ''}
     `;
-
+  
     // Close button handler
     const closeBtn = toast.querySelector('.luxury-toast-close');
     closeBtn.addEventListener('click', () => this.remove(toast));
-
-    // Pause progress on hover
-    toast.addEventListener('mouseenter', () => {
-      const progress = toast.querySelector('.luxury-toast-progress');
-      if (progress) {
-        progress.style.animationPlayState = 'paused';
-      }
-    });
-
-    toast.addEventListener('mouseleave', () => {
-      const progress = toast.querySelector('.luxury-toast-progress');
-      if (progress) {
-        progress.style.animationPlayState = 'running';
-      }
-    });
-
+  
     this.container.appendChild(toast);
-
+  
     return toast;
   }
 

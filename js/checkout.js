@@ -1,10 +1,281 @@
 // =========================
-// 💳 CHECKOUT MODULE - QIANLUNSHOP
-// Extracted from script.js for better modularity
+// 💳 CHECKOUT MODULE - FIXED
 // =========================
 import { Cart } from "./cart.js";
 import { CONFIG, Utils } from "./config.js";
-import { showToast, Modal } from "./ui.js";
+import { showToast } from "./ui.js";
+
+// =========================
+// 🎨 CHECKOUT CONFIRMATION MODAL (SEPARATE FROM CART)
+// =========================
+class CheckoutConfirmModal {
+  constructor() {
+    this.modal = null;
+    this.resolveCallback = null;
+    this.init();
+  }
+
+  init() {
+    this.injectStyles();
+  }
+
+  injectStyles() {
+    if (document.getElementById('checkout-confirm-styles')) return;
+
+    const style = document.createElement('style');
+    style.id = 'checkout-confirm-styles';
+    style.textContent = `
+      .checkout-confirm-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        backdrop-filter: blur(10px);
+        z-index: 10002;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
+        padding: 20px;
+      }
+
+      .checkout-confirm-overlay.show {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      .checkout-confirm-modal {
+        background: linear-gradient(135deg, rgba(26, 26, 26, 0.98), rgba(20, 20, 20, 0.95));
+        border: 1px solid rgba(212, 175, 55, 0.3);
+        border-radius: 20px;
+        padding: 2.5rem;
+        max-width: 500px;
+        width: 100%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        transform: scale(0.9) translateY(20px);
+        transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        position: relative;
+      }
+
+      .checkout-confirm-overlay.show .checkout-confirm-modal {
+        transform: scale(1) translateY(0);
+      }
+
+      .checkout-confirm-icon {
+        font-size: 4rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        filter: drop-shadow(0 4px 12px rgba(212, 175, 55, 0.4));
+        animation: iconBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      }
+
+      .checkout-confirm-title {
+        font-family: 'Playfair Display', serif;
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: #d4af37;
+        text-align: center;
+        margin-bottom: 1rem;
+        letter-spacing: 0.5px;
+        text-shadow: 0 2px 8px rgba(212, 175, 55, 0.3);
+      }
+
+      .checkout-confirm-message {
+        font-family: 'Inter', sans-serif;
+        font-size: 1.05rem;
+        color: #e8e8e8;
+        text-align: center;
+        line-height: 1.6;
+        margin-bottom: 1.5rem;
+        opacity: 0.95;
+      }
+
+      .checkout-confirm-details {
+        background: rgba(212, 175, 55, 0.08);
+        border: 1px solid rgba(212, 175, 55, 0.2);
+        border-radius: 12px;
+        padding: 1.5rem;
+        margin: 1.5rem 0;
+      }
+
+      .checkout-confirm-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0.8rem;
+        color: #e8e8e8;
+        font-size: 0.95rem;
+      }
+
+      .checkout-confirm-row:last-child {
+        margin-bottom: 0;
+        padding-top: 0.8rem;
+        border-top: 1px solid rgba(212, 175, 55, 0.2);
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #f4d03f;
+      }
+
+      .checkout-confirm-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+
+      .checkout-confirm-btn {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        border: none;
+        border-radius: 12px;
+        font-family: 'Inter', sans-serif;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .checkout-confirm-btn-confirm {
+        background: linear-gradient(135deg, #d4af37, #f4d03f);
+        color: #000;
+        border: 1px solid rgba(212, 175, 55, 0.5);
+        box-shadow: 0 4px 15px rgba(212, 175, 55, 0.3);
+      }
+
+      .checkout-confirm-btn-confirm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(212, 175, 55, 0.5);
+      }
+
+      .checkout-confirm-btn-cancel {
+        background: rgba(255, 255, 255, 0.05);
+        color: #e8e8e8;
+        border: 1px solid rgba(212, 175, 55, 0.3);
+      }
+
+      .checkout-confirm-btn-cancel:hover {
+        background: rgba(212, 175, 55, 0.15);
+        border-color: #d4af37;
+        transform: translateY(-2px);
+      }
+
+      @media (max-width: 768px) {
+        .checkout-confirm-modal {
+          padding: 2rem;
+        }
+
+        .checkout-confirm-icon {
+          font-size: 3rem;
+        }
+
+        .checkout-confirm-title {
+          font-size: 1.5rem;
+        }
+
+        .checkout-confirm-actions {
+          flex-direction: column;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  }
+
+  show(options = {}) {
+    return new Promise((resolve) => {
+      this.resolveCallback = resolve;
+
+      const {
+        title = 'Konfirmasi Pembayaran',
+        message = 'Apakah data pesanan sudah benar?',
+        total = 0,
+        icon = '💳',
+        confirmText = 'Ya, Bayar Sekarang',
+        cancelText = 'Batal'
+      } = options;
+
+      const overlay = document.createElement('div');
+      overlay.className = 'checkout-confirm-overlay';
+      overlay.id = 'checkoutConfirmOverlay';
+
+      overlay.innerHTML = `
+        <div class="checkout-confirm-modal">
+          <div class="checkout-confirm-icon">${icon}</div>
+          <h2 class="checkout-confirm-title">${title}</h2>
+          <p class="checkout-confirm-message">${message}</p>
+          
+          ${total ? `
+            <div class="checkout-confirm-details">
+              <div class="checkout-confirm-row">
+                <span>Total Pembayaran:</span>
+                <span>${Utils.formatPrice(total)}</span>
+              </div>
+            </div>
+          ` : ''}
+          
+          <div class="checkout-confirm-actions">
+            <button class="checkout-confirm-btn checkout-confirm-btn-cancel" data-action="cancel">
+              ${cancelText}
+            </button>
+            <button class="checkout-confirm-btn checkout-confirm-btn-confirm" data-action="confirm">
+              ${confirmText}
+            </button>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(overlay);
+      this.modal = overlay;
+      document.body.style.overflow = 'hidden';
+
+      requestAnimationFrame(() => {
+        overlay.classList.add('show');
+      });
+
+      const cancelBtn = overlay.querySelector('[data-action="cancel"]');
+      const confirmBtn = overlay.querySelector('[data-action="confirm"]');
+
+      cancelBtn.addEventListener('click', () => this.close(false));
+      confirmBtn.addEventListener('click', () => this.close(true));
+
+      overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+          this.close(false);
+        }
+      });
+
+      const escHandler = (e) => {
+        if (e.key === 'Escape') {
+          this.close(false);
+          document.removeEventListener('keydown', escHandler);
+        }
+      };
+      document.addEventListener('keydown', escHandler);
+    });
+  }
+
+  close(confirmed) {
+    if (!this.modal) return;
+
+    this.modal.classList.remove('show');
+
+    setTimeout(() => {
+      if (this.modal && this.modal.parentNode) {
+        this.modal.remove();
+      }
+      this.modal = null;
+      document.body.style.overflow = '';
+
+      if (this.resolveCallback) {
+        this.resolveCallback(confirmed);
+        this.resolveCallback = null;
+      }
+    }, 300);
+  }
+}
+
+const checkoutConfirmModal = new CheckoutConfirmModal();
 
 // =========================
 // 💳 Checkout Manager Class
@@ -15,6 +286,7 @@ export class CheckoutManager {
     this.shippingCost = 0;
     this.discount = 0;
     this.promoCode = '';
+    this.isProcessing = false;
     this.init();
   }
 
@@ -43,7 +315,6 @@ export class CheckoutManager {
         </div>
       `;
 
-      // Disable the place order button if cart is empty
       if (placeOrderBtn) {
         placeOrderBtn.disabled = true;
         placeOrderBtn.textContent = 'Keranjang Kosong';
@@ -66,7 +337,6 @@ export class CheckoutManager {
       </div>
     `).join('');
 
-    // Enable the place order button if cart has items
     if (placeOrderBtn) {
       placeOrderBtn.disabled = false;
       placeOrderBtn.innerHTML = '🛍️ Bayar Sekarang';
@@ -79,8 +349,7 @@ export class CheckoutManager {
     const subtotal = this.cart.getTotal();
     const tax = subtotal * CONFIG.TAX_RATE;
     const grandTotal = subtotal + this.shippingCost + tax - this.discount;
-  
-    // Update UI elements
+
     const elements = {
       'subtotal': subtotal,
       'shippingCost': this.shippingCost,
@@ -88,16 +357,16 @@ export class CheckoutManager {
       'discountAmount': -this.discount,
       'grandTotal': grandTotal
     };
-  
+
     Object.entries(elements).forEach(([id, value]) => {
       const element = document.getElementById(id);
       if (element) {
         element.textContent = Utils.formatPrice(value);
       }
     });
+
     this.updateShippingSelectionOnly(subtotal);
-  
-    // Update free shipping message
+
     const freeShippingMsg = document.getElementById('freeShippingMsg');
     if (freeShippingMsg) {
       if (Utils.isFreeShippingEligible(subtotal)) {
@@ -112,18 +381,13 @@ export class CheckoutManager {
   }
 
   updateShippingSelectionOnly(subtotal) {
-    const shippingSelect = document.getElementById('shipping');
-    if (!shippingSelect) return;
-
-    // Always keep current selection, no auto-switching
     this.updateShippingOptions();
   }
 
-  updateShippingOptions(isEligible) {
+  updateShippingOptions() {
     const shippingSelect = document.getElementById('shipping');
     if (!shippingSelect) return;
 
-    // Populate shipping options - always show all options including FREE
     const shippingOptions = Object.entries(CONFIG.SHIPPING);
 
     shippingSelect.innerHTML = shippingOptions.map(([key, method]) => `
@@ -133,7 +397,6 @@ export class CheckoutManager {
       </option>
     `).join('');
 
-    // Ensure the current selection is still valid
     const currentValue = shippingSelect.value;
     const validOptions = shippingOptions.map(([key]) => key.toLowerCase());
     if (!validOptions.includes(currentValue)) {
@@ -153,7 +416,6 @@ export class CheckoutManager {
     let costChanged = false;
     let oldCost = this.shippingCost;
 
-    // Always set cost based on shipping method - free shipping is always free
     this.shippingCost = shipping.cost;
     costChanged = (oldCost !== this.shippingCost);
 
@@ -163,12 +425,9 @@ export class CheckoutManager {
   }
 
   setupEventListeners() {
-    // Shipping method selection
     const shippingSelect = document.getElementById('shipping');
     if (shippingSelect) {
       const isEligible = Utils.isFreeShippingEligible(this.cart.getTotal());
-
-      // Populate shipping options - always show all options including FREE
       const shippingOptions = Object.entries(CONFIG.SHIPPING);
 
       shippingSelect.innerHTML = shippingOptions.map(([key, method]) => `
@@ -182,14 +441,10 @@ export class CheckoutManager {
         this.updateShippingCost(e.target.value);
       });
 
-      // Set default to free shipping if eligible, otherwise regular
       shippingSelect.value = isEligible ? 'free' : 'regular';
-
-      // Set initial shipping cost
       this.updateShippingCost(shippingSelect.value);
     }
 
-    // Payment methods
     const paymentMethods = document.querySelectorAll('input[name="payment"]');
     const creditCardForm = document.getElementById('creditCardForm');
 
@@ -201,22 +456,20 @@ export class CheckoutManager {
       });
     });
 
-    // Promo code
     const applyPromoBtn = document.getElementById('applyPromo');
     if (applyPromoBtn) {
       applyPromoBtn.addEventListener('click', () => this.applyPromoCode());
     }
 
-    // Place order
     const placeOrderBtn = document.getElementById('placeOrder');
     if (placeOrderBtn) {
       placeOrderBtn.addEventListener('click', (e) => {
         e.preventDefault();
+        console.log("🛍️ Place Order button clicked");
         this.placeOrder();
       });
     }
 
-    // Form validation
     this.setupFormValidation();
   }
 
@@ -229,23 +482,20 @@ export class CheckoutManager {
     });
   }
 
-  // ✅ FIX: Improved field validation
   validateField(field) {
     const value = field.value.trim();
     let isValid = true;
     let message = '';
 
-    // ✅ Skip validation jika field hidden
     const style = window.getComputedStyle(field);
     const parentStyle = field.parentElement ?
       window.getComputedStyle(field.parentElement) : null;
 
     if (style.display === 'none' ||
-        (parentStyle && parentStyle.display === 'none')) {
-      return true; // Field hidden, skip validation
+      (parentStyle && parentStyle.display === 'none')) {
+      return true;
     }
 
-    // Check required first
     if (field.required && !value) {
       isValid = false;
       message = 'Field ini wajib diisi';
@@ -253,31 +503,27 @@ export class CheckoutManager {
       return isValid;
     }
 
-    // Skip validation if empty and not required
     if (!value && !field.required) {
       this.updateFieldError(field, true, '');
       return true;
     }
 
-    // Type-specific validation
     switch (field.type) {
       case 'email':
         isValid = Utils.validateEmail(value);
-        message = isValid ? '' : 'Format email tidak valid (contoh: nama@email.com)';
+        message = isValid ? '' : 'Format email tidak valid';
         break;
 
       case 'tel':
         isValid = Utils.validatePhone(value);
-        message = isValid ? '' : 'Format nomor telepon tidak valid (contoh: 08123456789)';
+        message = isValid ? '' : 'Format nomor telepon tidak valid';
         break;
 
       case 'text':
-        // Field-specific validation
         if (field.id === 'postalCode') {
           isValid = /^\d{5}$/.test(value);
           message = isValid ? '' : 'Kode pos harus 5 digit angka';
         } else if (field.id === 'cardNumber') {
-          // Credit card Luhn validation
           const cleanNumber = value.replace(/\s/g, '');
           isValid = /^\d{13,19}$/.test(cleanNumber) && this.luhnCheck(cleanNumber);
           message = isValid ? '' : 'Nomor kartu tidak valid';
@@ -286,7 +532,7 @@ export class CheckoutManager {
           message = isValid ? '' : 'CVV harus 3-4 digit';
         } else if (field.id === 'expiryDate') {
           isValid = this.validateExpiryDate(value);
-          message = isValid ? '' : 'Format MM/YY, harus masa depan';
+          message = isValid ? '' : 'Format MM/YY harus masa depan';
         } else if (field.id === 'fullName') {
           isValid = value.length >= 3;
           message = isValid ? '' : 'Nama minimal 3 karakter';
@@ -306,7 +552,6 @@ export class CheckoutManager {
     return isValid;
   }
 
-  // Helper: Update field error display
   updateFieldError(field, isValid, message) {
     field.classList.toggle('error', !isValid);
 
@@ -327,7 +572,6 @@ export class CheckoutManager {
     errorElement.style.display = message ? 'block' : 'none';
   }
 
-  // Helper: Luhn algorithm for credit card
   luhnCheck(cardNumber) {
     let sum = 0;
     let isEven = false;
@@ -347,7 +591,6 @@ export class CheckoutManager {
     return sum % 10 === 0;
   }
 
-  // Helper: Validate expiry date
   validateExpiryDate(value) {
     const match = value.match(/^(\d{2})\/(\d{2})$/);
     if (!match) return false;
@@ -377,7 +620,6 @@ export class CheckoutManager {
       showToast(CONFIG.MESSAGES.PROMO_APPLIED, 'success');
       this.calculateTotals();
 
-      // Track analytics
       Utils.trackEvent(CONFIG.ANALYTICS_EVENTS.APPLY_PROMO, {
         promo_code: promoCode,
         discount_amount: this.discount
@@ -390,247 +632,166 @@ export class CheckoutManager {
     }
   }
 
+  // ✅ FIXED: Custom Checkout Confirmation Modal
   async showOrderConfirmation() {
     const subtotal = this.cart.getTotal();
     const discountedSubtotal = subtotal - this.discount;
     const tax = discountedSubtotal * CONFIG.TAX_RATE;
     const grandTotal = discountedSubtotal + this.shippingCost + tax;
 
-    const message = `Apakah data pesanan sudah benar?\n\nTotal: ${Utils.formatPrice(grandTotal)}\n\nKlik OK untuk melanjutkan pembayaran.`;
-
-    return await Modal.confirm(message, 'Konfirmasi Pesanan');
+    return await checkoutConfirmModal.show({
+      title: 'Konfirmasi Pembayaran',
+      message: 'Apakah data pesanan sudah benar? Pastikan semua informasi telah terisi dengan benar.',
+      total: grandTotal,
+      icon: '💳',
+      confirmText: 'Ya, Bayar Sekarang',
+      cancelText: 'Periksa Kembali'
+    });
   }
 
-  showPaymentLoading() {
-    const overlay = document.createElement('div');
-    overlay.id = 'payment-loading';
-    overlay.setAttribute('role', 'dialog');
-    overlay.setAttribute('aria-modal', 'true');
-    overlay.setAttribute('aria-labelledby', 'loading-title');
-    overlay.setAttribute('aria-describedby', 'loading-description');
-    overlay.innerHTML = `
-      <div class="payment-loading-modal">
-        <div class="loading-spinner" aria-hidden="true"></div>
-        <h3 id="loading-title">🔄 Memproses Pembayaran</h3>
-        <p id="loading-description">Mohon tunggu, jangan tutup halaman ini...</p>
-        <div class="payment-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Progress pembayaran">
-          <div class="progress-bar"></div>
-        </div>
-      </div>
-    `;
-    overlay.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.8);
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    `;
-    document.body.appendChild(overlay);
+  async placeOrder() {
+    console.log("🛍️ Place Order executing...");
 
-    // Announce to screen readers
-    const announcement = document.createElement('div');
-    announcement.setAttribute('aria-live', 'assertive');
-    announcement.setAttribute('aria-atomic', 'true');
-    announcement.className = 'sr-only';
-    announcement.textContent = 'Memproses pembayaran, mohon tunggu sebentar';
-    overlay.appendChild(announcement);
+    if (this.isProcessing) {
+      console.log("⚠️ Already processing");
+      return;
+    }
 
-    // Animate progress bar
-    const progressBar = overlay.querySelector('.progress-bar');
-    progressBar.style.cssText = `
-      width: 0%;
-      height: 4px;
-      background: linear-gradient(90deg, #007bff, #28a745);
-      border-radius: 2px;
-      transition: width 2s ease-in-out;
-    `;
+    if (this.cart.getItems().length === 0) {
+      showToast('Keranjang belanja kosong', 'error');
+      return;
+    }
 
-    setTimeout(() => {
-      progressBar.style.width = '100%';
-    }, 100);
-  }
+    const requiredFields = Array.from(document.querySelectorAll('[required]'));
+    const visibleFields = requiredFields.filter(field => {
+      const style = window.getComputedStyle(field);
+      const parentStyle = field.parentElement ?
+        window.getComputedStyle(field.parentElement) : null;
 
-// =========================
-// 💳 FIXED CHECKOUT - QIANLUNSHOP
-// Bug fix: Validate hanya field yang visible
-// =========================
+      return style.display !== 'none' &&
+        (!parentStyle || parentStyle.display !== 'none');
+    });
 
-async placeOrder() {
-  console.log("🛍️ Place Order clicked");
+    let allValid = true;
+    let firstInvalidField = null;
 
-  // Check cart
-  if (this.cart.getItems().length === 0) {
-    showToast('Keranjang belanja kosong', 'error');
-    return;
-  }
-
-  // ✅ FIX: Validate hanya field yang VISIBLE
-  const requiredFields = Array.from(document.querySelectorAll('[required]'));
-
-  // Filter hanya field yang visible
-  const visibleFields = requiredFields.filter(field => {
-    // Check if field atau parent-nya hidden
-    const style = window.getComputedStyle(field);
-    const parentStyle = field.parentElement ?
-      window.getComputedStyle(field.parentElement) : null;
-
-    return style.display !== 'none' &&
-           (!parentStyle || parentStyle.display !== 'none');
-  });
-
-  console.log("📋 Validating fields:", visibleFields.length);
-
-  let allValid = true;
-  let firstInvalidField = null;
-
-  visibleFields.forEach(field => {
-    const isValid = this.validateField(field);
-    if (!isValid) {
-      allValid = false;
-      if (!firstInvalidField) {
-        firstInvalidField = field;
+    visibleFields.forEach(field => {
+      const isValid = this.validateField(field);
+      if (!isValid) {
+        allValid = false;
+        if (!firstInvalidField) {
+          firstInvalidField = field;
+        }
       }
+    });
+
+    if (!allValid) {
+      showToast(CONFIG.MESSAGES.FORM_INCOMPLETE, 'error');
+
+      if (firstInvalidField) {
+        firstInvalidField.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center'
+        });
+        firstInvalidField.focus();
+      }
+      return;
     }
-  });
 
-  if (!allValid) {
-    showToast(CONFIG.MESSAGES.FORM_INCOMPLETE, 'error');
-
-    // Focus ke field pertama yang invalid
-    if (firstInvalidField) {
-      firstInvalidField.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center'
-      });
-      firstInvalidField.focus();
-    }
-    return;
-  }
-
-  console.log("✅ All fields valid");
-
-  // ✅ FIX: Show confirmation dengan proper error handling
-  try {
+    // ✅ Use custom modal instead of native confirm
     const confirmed = await this.showOrderConfirmation();
 
     if (!confirmed) {
       console.log("❌ User cancelled order");
-      return; // User cancel, nothing to do
-    }
-  } catch (error) {
-    console.error("❌ Confirmation modal error:", error);
-    showToast("Terjadi kesalahan, silakan coba lagi", "error");
-    return;
-  }
-
-  // ✅ FIX: Disable button dengan proper state management
-  const placeOrderBtn = document.getElementById('placeOrder');
-  const originalText = placeOrderBtn ? placeOrderBtn.innerHTML : '';
-
-  try {
-    if (placeOrderBtn) {
-      placeOrderBtn.innerHTML = '⏳ ' + CONFIG.MESSAGES.PAYMENT_PROCESSING;
-      placeOrderBtn.disabled = true;
-      placeOrderBtn.style.cursor = 'not-allowed';
-      placeOrderBtn.style.opacity = '0.6';
+      return;
     }
 
-    console.log("💳 Processing payment...");
-    await this.processPayment();
+    this.isProcessing = true;
 
-    // Calculate totals
-    const subtotal = this.cart.getTotal();
-    const discountedSubtotal = subtotal - this.discount;
-    const tax = discountedSubtotal * CONFIG.TAX_RATE;
-    const grandTotal = discountedSubtotal + this.shippingCost + tax;
+    const placeOrderBtn = document.getElementById('placeOrder');
+    const originalText = placeOrderBtn ? placeOrderBtn.innerHTML : '';
 
-    const order = {
-      id: Utils.generateId('ORD'),
-      date: new Date().toISOString(),
-      items: this.cart.getItems(),
-      customerInfo: this.getCustomerInfo(),
-      shipping: this.getShippingInfo(),
-      payment: this.getPaymentInfo(),
-      promoCode: this.promoCode,
-      totals: {
-        subtotal: subtotal,
-        shipping: this.shippingCost,
-        tax: tax,
-        discount: this.discount,
-        grandTotal: grandTotal
-      },
-      status: 'completed'
-    };
+    try {
+      if (placeOrderBtn) {
+        placeOrderBtn.innerHTML = '⏳ Memproses...';
+        placeOrderBtn.disabled = true;
+        placeOrderBtn.style.cursor = 'not-allowed';
+        placeOrderBtn.style.opacity = '0.6';
+      }
 
-    this.saveOrder(order);
+      console.log("💳 Processing payment...");
 
-    // ✅ FIX: Clear cart DULU sebelum save order data
-    console.log("🗑️ Clearing cart...");
-    await this.cart.clear();
+      await new Promise(resolve => setTimeout(resolve, 2000));
 
-    // ✅ Baru save order data untuk confirmation page
-    const orderData = {
-      orderId: order.id,
-      date: new Date().toLocaleDateString('id-ID'),
-      customerEmail: order.customerInfo.email,
-      paymentMethod: order.payment.methodName,
-      shippingAddress: `${order.customerInfo.address}, ${order.customerInfo.city} ${order.customerInfo.postalCode}`,
-      total: order.totals.grandTotal
-    };
+      const subtotal = this.cart.getTotal();
+      const discountedSubtotal = subtotal - this.discount;
+      const tax = discountedSubtotal * CONFIG.TAX_RATE;
+      const grandTotal = discountedSubtotal + this.shippingCost + tax;
 
-    console.log("💾 Saving order data:", orderData);
-    Utils.saveToStorage('qianlunshop_last_order', orderData);
+      const order = {
+        id: Utils.generateId('ORD'),
+        date: new Date().toISOString(),
+        items: this.cart.getItems(),
+        customerInfo: this.getCustomerInfo(),
+        shipping: this.getShippingInfo(),
+        payment: this.getPaymentInfo(),
+        promoCode: this.promoCode,
+        totals: {
+          subtotal: subtotal,
+          shipping: this.shippingCost,
+          tax: tax,
+          discount: this.discount,
+          grandTotal: grandTotal
+        },
+        status: 'completed'
+      };
 
-    // Show success notification
-    showToast('🎉 Pembayaran berhasil! Mengalihkan...', 'success');
+      this.saveOrder(order);
 
-    // Track analytics
-    if (typeof Utils !== 'undefined' && Utils.trackEvent) {
-      Utils.trackEvent(CONFIG.ANALYTICS_EVENTS.PURCHASE, {
-        transaction_id: order.id,
-        value: order.totals.grandTotal,
-        currency: 'IDR'
-      });
-    }
+      console.log("🗑️ Clearing cart...");
+      await this.cart.clear(true);
 
-    // Redirect dengan delay
-    setTimeout(() => {
-      console.log("🔄 Redirecting to confirmation...");
-      window.location.href = `order-confirmation.html`;
-    }, 1500);
+      const orderData = {
+        orderId: order.id,
+        date: new Date().toLocaleDateString('id-ID'),
+        customerEmail: order.customerInfo.email,
+        paymentMethod: order.payment.methodName,
+        shippingAddress: `${order.customerInfo.address}, ${order.customerInfo.city} ${order.customerInfo.postalCode}`,
+        total: order.totals.grandTotal,
+        items: order.items
+      };
 
-  } catch (error) {
-    console.error('❌ Order error:', error);
-    showToast(CONFIG.MESSAGES.ORDER_FAILED, 'error');
+      console.log("💾 Saving order data:", orderData);
+      Utils.saveToStorage('qianlunshop_last_order', orderData);
 
-    // ✅ FIX: Reset button state jika error
-    if (placeOrderBtn) {
-      placeOrderBtn.innerHTML = originalText || '🛍️ Bayar Sekarang';
-      placeOrderBtn.disabled = false;
-      placeOrderBtn.style.cursor = 'pointer';
-      placeOrderBtn.style.opacity = '1';
-    }
-  }
-}
+      showToast('🎉 Pembayaran berhasil! Mengalihkan...', 'success');
 
-  async processPayment() {
-    return new Promise((resolve, reject) => {
-      // Simulate payment with random failure (5% chance)
+      if (typeof Utils !== 'undefined' && Utils.trackEvent) {
+        Utils.trackEvent(CONFIG.ANALYTICS_EVENTS.PURCHASE, {
+          transaction_id: order.id,
+          value: order.totals.grandTotal,
+          currency: 'IDR'
+        });
+      }
+
       setTimeout(() => {
-        const success = Math.random() > 0.05;
+        console.log("🔄 Redirecting to confirmation...");
+        window.location.href = `order-confirmation.html`;
+      }, 1500);
 
-        if (success) {
-          resolve({ success: true, transactionId: 'TXN-' + Date.now() });
-        } else {
-          reject(new Error('Payment gateway timeout'));
-        }
-      }, 2000);
-    });
+    } catch (error) {
+      console.error('❌ Order error:', error);
+      showToast(CONFIG.MESSAGES.ORDER_FAILED, 'error');
+
+      if (placeOrderBtn) {
+        placeOrderBtn.innerHTML = originalText || '🛍️ Bayar Sekarang';
+        placeOrderBtn.disabled = false;
+        placeOrderBtn.style.cursor = 'pointer';
+        placeOrderBtn.style.opacity = '1';
+      }
+
+      this.isProcessing = false;
+    }
   }
 
   getCustomerInfo() {
@@ -648,7 +809,6 @@ async placeOrder() {
     const shippingSelect = document.getElementById('shipping');
     const method = shippingSelect?.value || 'regular';
 
-    // Map method values to config keys
     const methodKeyMap = {
       'regular': 'REGULAR',
       'express': 'EXPRESS',

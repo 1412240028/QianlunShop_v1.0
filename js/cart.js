@@ -728,19 +728,22 @@ export class Cart {
     }
   }
 
-  async clear() {
+  async clear(silent = false) {
     try {
-      const confirmed = await confirmModal.show({
-        title: 'Kosongkan Keranjang?',
-        message: 'Semua produk akan dihapus. Tindakan ini tidak dapat dibatalkan.',
-        icon: '🗑️',
-        confirmText: 'Ya, Kosongkan',
-        cancelText: 'Batal'
-      });
-  
-      if (!confirmed) {
-        console.log('✅ Clear cancelled');
-        return false;
+      // Skip confirmation modal if silent mode
+      if (!silent) {
+        const confirmed = await confirmModal.show({
+          title: 'Kosongkan Keranjang?',
+          message: 'Semua produk akan dihapus. Tindakan ini tidak dapat dibatalkan.',
+          icon: '🗑️',
+          confirmText: 'Ya, Kosongkan',
+          cancelText: 'Batal'
+        });
+    
+        if (!confirmed) {
+          console.log('✅ Clear cancelled');
+          return false;
+        }
       }
   
       await this.acquireLock();
@@ -750,14 +753,20 @@ export class Cart {
       this.releaseLock();
       
       this.emit('cart-cleared', { itemCount });
-      showToast(`✅ ${itemCount} produk berhasil dihapus`, 'success');
+      
+      // Only show toast if not silent
+      if (!silent) {
+        showToast(`✅ ${itemCount} produk berhasil dihapus`, 'success');
+      }
       
       return true;
       
     } catch (error) {
       console.error("❌ Error clearing cart:", error);
       this.releaseLock();
-      showToast('❌ Gagal mengosongkan keranjang', 'error');
+      if (!silent) {
+        showToast('❌ Gagal mengosongkan keranjang', 'error');
+      }
       return false;
     }
   }

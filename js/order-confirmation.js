@@ -1,5 +1,3 @@
-buat file baru bernama: order-confirmation.js
-isi nya :
 // =========================
 // 📦 ORDER CONFIRMATION MODULE - COMPLETE FIXED
 // =========================
@@ -14,7 +12,7 @@ export function initOrderConfirmation() {
   console.log("📦 Initializing Order Confirmation...");
 
   const confirmationContainer = document.querySelector('.order-confirmation');
-  
+
   if (!confirmationContainer) {
     console.log("ℹ️ Not on order confirmation page");
     return;
@@ -40,10 +38,10 @@ export function initOrderConfirmation() {
 
     console.log("✅ Order data found:", orderData);
     renderOrderConfirmation(confirmationContainer, orderData);
-    
+
     // Clear cart after showing confirmation
     clearCart();
-    
+
     showToast('🎉 Pesanan berhasil dibuat!', 'success');
   }, 500);
 }
@@ -54,7 +52,7 @@ export function initOrderConfirmation() {
 function getOrderData() {
   try {
     const orderData = Utils.loadFromStorage('qianlunshop_last_order', null);
-    
+
     if (!orderData) {
       console.warn("⚠️ No order data in localStorage");
       return null;
@@ -85,15 +83,15 @@ function getOrderData() {
 function saveToOrderHistory(orderData) {
   try {
     const orders = Utils.loadFromStorage('qianlunshop_orders', []);
-    
+
     const exists = orders.some(order => order.orderId === orderData.orderId);
-    
+
     if (!exists) {
       orders.push({
         ...orderData,
         savedAt: Date.now()
       });
-      
+
       Utils.saveToStorage('qianlunshop_orders', orders);
       console.log("💾 Order saved to history");
     }
@@ -120,7 +118,7 @@ function clearCart() {
 function renderOrderConfirmation(container, orderData) {
   const confirmationHTML = `
     <div class="confirmation-icon" role="img" aria-label="Success">✓</div>
-    
+
     <h2>Pesanan Anda Telah Berhasil Dikonfirmasi!</h2>
 
     <p class="order-id">
@@ -128,8 +126,8 @@ function renderOrderConfirmation(container, orderData) {
     </p>
 
     <p class="confirmation-message">
-      Terima kasih telah berbelanja di QianlunShop. Kami telah mengirimkan detail 
-      pesanan lengkap ke alamat email <strong>${orderData.customerEmail}</strong>. 
+      Terima kasih telah berbelanja di QianlunShop. Kami telah mengirimkan detail
+      pesanan lengkap ke alamat email <strong>${orderData.customerEmail}</strong>.
       Harap tunggu informasi pengiriman.
     </p>
 
@@ -138,17 +136,17 @@ function renderOrderConfirmation(container, orderData) {
         <strong>Tanggal Pesanan:</strong>
         <span>${orderData.date || formatDate(new Date())}</span>
       </div>
-      
+
       <div class="detail-item">
         <strong>Metode Pembayaran:</strong>
         <span>${orderData.paymentMethod || 'N/A'}</span>
       </div>
-      
+
       <div class="detail-item">
         <strong>Alamat Pengiriman:</strong>
         <span>${orderData.shippingAddress || 'N/A'}</span>
       </div>
-      
+
       <div class="detail-item">
         <strong>Total Pembayaran:</strong>
         <span class="total-amount">${Utils.formatPrice(orderData.total)}</span>
@@ -177,7 +175,7 @@ function renderOrderConfirmation(container, orderData) {
   `;
 
   container.innerHTML = confirmationHTML;
-  
+
   addPrintStyles();
 }
 
@@ -219,11 +217,11 @@ function renderOrderItems(items) {
 function renderErrorState(container) {
   container.innerHTML = `
     <div class="confirmation-icon error-icon" role="img" aria-label="Error">❌</div>
-    
+
     <h2>Oops! Data Pesanan Tidak Ditemukan</h2>
-    
+
     <p class="error-message">
-      Maaf, kami tidak dapat menemukan data pesanan Anda. 
+      Maaf, kami tidak dapat menemukan data pesanan Anda.
       Kemungkinan sesi telah berakhir atau terjadi kesalahan.
     </p>
 
@@ -271,35 +269,35 @@ function addPrintStyles() {
       body * {
         visibility: hidden;
       }
-      
+
       .order-confirmation,
       .order-confirmation * {
         visibility: visible;
       }
-      
+
       .order-confirmation {
         position: absolute;
         left: 0;
         top: 0;
         width: 100%;
       }
-      
+
       .confirmation-actions,
       .navbar,
       footer {
         display: none !important;
       }
-      
+
       .confirmation-icon {
         font-size: 3rem;
       }
-      
+
       @page {
         margin: 2cm;
       }
     }
   `;
-  
+
   document.head.appendChild(style);
 }
 
@@ -308,11 +306,11 @@ function addPrintStyles() {
 // =========================
 export function debugOrderConfirmation() {
   console.log("=== ORDER CONFIRMATION DEBUG ===");
-  
+
   const orderData = Utils.loadFromStorage('qianlunshop_last_order', null);
   const orderHistory = Utils.loadFromStorage('qianlunshop_orders', []);
   const cart = Utils.loadFromStorage('qianlunshop_cart', []);
-  
+
   const debugInfo = {
     'Last Order Exists': orderData ? '✅ YES' : '❌ NO',
     'Order ID': orderData?.orderId || 'N/A',
@@ -323,7 +321,7 @@ export function debugOrderConfirmation() {
     'History Count': orderHistory.length,
     'Cart Items': cart.length
   };
-  
+
   console.table(debugInfo);
   console.log("\n📦 Full Order Data:");
   console.log(orderData);
@@ -332,7 +330,7 @@ export function debugOrderConfirmation() {
   console.log("\n🛒 Current Cart:");
   console.log(cart);
   console.log("================================");
-  
+
   return { orderData, orderHistory, cart };
 }
 
@@ -342,443 +340,3 @@ if (typeof window !== 'undefined') {
 }
 
 console.log("✅ Order Confirmation module loaded");
-
-import dan export agar terintegrasi dan tersambung dengan semua file.
-
-perbaiki order confirmation css dengan code ini:
-/* =========================
-   QianlunShop - Order Confirmation Page (FIXED)
-   ========================= */
-
-/* Container */
-.order-confirmation-section {
-  min-height: 80vh;
-  padding: 140px 2rem 4rem;
-  background: linear-gradient(135deg, #0a0a0a, #1c1c1c);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Loading State */
-.confirmation-loading {
-  text-align: center;
-  padding: 3rem;
-}
-
-.loading-spinner {
-  width: 50px;
-  height: 50px;
-  border: 3px solid rgba(212, 175, 55, 0.3);
-  border-top: 3px solid var(--gold-primary);
-  border-radius: 50%;
-  margin: 0 auto 20px;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
-}
-
-.confirmation-loading p {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-}
-
-.order-confirmation {
-  text-align: center;
-  max-width: 800px;
-  width: 100%;
-  margin: 0 auto;
-  padding: 3rem 2rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(212, 175, 55, 0.25);
-  border-radius: 20px;
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-  animation: fadeInUp 0.8s ease forwards;
-}
-
-/* Success Icon */
-.confirmation-icon {
-  font-size: 5rem;
-  margin-bottom: 2rem;
-  display: inline-block;
-  width: 120px;
-  height: 120px;
-  line-height: 120px;
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(46, 204, 113, 0.2));
-  border: 3px solid var(--gold-primary);
-  border-radius: 50%;
-  color: var(--gold-primary);
-  animation: iconBounce 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  box-shadow: 0 8px 25px rgba(212, 175, 55, 0.3);
-}
-
-.confirmation-icon.error-icon {
-  background: linear-gradient(135deg, rgba(212, 175, 55, 0.2), rgba(231, 76, 60, 0.2));
-  border-color: var(--error);
-  color: var(--error);
-}
-
-@keyframes iconBounce {
-  0% { transform: scale(0) rotate(-180deg); opacity: 0; }
-  50% { transform: scale(1.2) rotate(10deg); }
-  100% { transform: scale(1) rotate(0deg); opacity: 1; }
-}
-
-/* Title */
-.order-confirmation h2 {
-  font-family: var(--font-heading);
-  color: var(--gold-primary);
-  font-size: 2.5rem;
-  margin-bottom: 1.5rem;
-  letter-spacing: 1px;
-  text-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
-}
-
-/* Order ID */
-.order-id {
-  font-size: 1.2rem;
-  color: var(--text-light);
-  margin-bottom: 2rem;
-  padding: 1rem;
-  background: rgba(212, 175, 55, 0.1);
-  border-radius: 10px;
-  border: 1px solid rgba(212, 175, 55, 0.2);
-}
-
-.order-id strong {
-  color: var(--gold-accent);
-}
-
-/* Confirmation Message */
-.confirmation-message {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1.8;
-  margin-bottom: 3rem;
-}
-
-.confirmation-message strong {
-  color: var(--gold-accent);
-  font-weight: 600;
-}
-
-/* Confirmation Details */
-.confirmation-details {
-  text-align: left;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px dashed rgba(212, 175, 55, 0.1);
-  color: var(--text-light);
-  transition: all 0.3s ease;
-}
-
-.detail-item:last-child {
-  border-bottom: none;
-  margin-bottom: 0;
-  padding-bottom: 0;
-}
-
-.detail-item:hover {
-  transform: translateX(5px);
-  color: var(--gold-accent);
-}
-
-.detail-item strong {
-  color: var(--text-muted);
-  font-weight: 600;
-  font-size: 0.95rem;
-}
-
-.detail-item span {
-  color: var(--text-light);
-  text-align: right;
-  max-width: 60%;
-  word-wrap: break-word;
-}
-
-.detail-item .total-amount {
-  color: var(--gold-accent);
-  font-weight: 700;
-  font-size: 1.3rem;
-  text-shadow: 0 0 10px rgba(244, 208, 63, 0.3);
-}
-
-/* Order Items Summary */
-.order-items-summary {
-  margin: 2.5rem 0;
-  text-align: left;
-}
-
-.order-items-summary h3 {
-  font-family: var(--font-heading);
-  color: var(--gold-primary);
-  font-size: 1.5rem;
-  margin-bottom: 1.5rem;
-  text-align: center;
-}
-
-.items-list {
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.15);
-}
-
-.items-list::-webkit-scrollbar {
-  width: 6px;
-}
-
-.items-list::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 10px;
-}
-
-.items-list::-webkit-scrollbar-thumb {
-  background: var(--gold-primary);
-  border-radius: 10px;
-}
-
-.order-item {
-  display: flex;
-  align-items: center;
-  gap: 1.2rem;
-  padding: 1rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  border-radius: 10px;
-  transition: all 0.3s ease;
-}
-
-.order-item:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.15);
-  border-color: rgba(212, 175, 55, 0.3);
-}
-
-.order-item img {
-  width: 70px;
-  height: 70px;
-  object-fit: cover;
-  border-radius: 8px;
-  border: 2px solid rgba(212, 175, 55, 0.3);
-}
-
-.order-item .item-details {
-  flex: 1;
-}
-
-.order-item h4 {
-  color: var(--text-light);
-  font-size: 1rem;
-  margin-bottom: 0.4rem;
-  font-weight: 600;
-}
-
-.order-item p {
-  color: var(--text-muted);
-  font-size: 0.9rem;
-}
-
-.order-item .item-subtotal {
-  color: var(--gold-accent);
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.no-items {
-  text-align: center;
-  color: var(--text-muted);
-  padding: 2rem;
-  font-style: italic;
-}
-
-/* Actions */
-.confirmation-actions {
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
-  flex-wrap: wrap;
-  margin-top: 2.5rem;
-}
-
-.confirmation-actions .btn {
-  min-width: 180px;
-}
-
-/* Order Tracking Info */
-.order-tracking-info {
-  margin-top: 3rem;
-  padding: 1.5rem;
-  background: rgba(212, 175, 55, 0.08);
-  border: 1px solid rgba(212, 175, 55, 0.2);
-  border-radius: 12px;
-}
-
-.order-tracking-info p {
-  color: var(--text-light);
-  margin-bottom: 0.5rem;
-  line-height: 1.6;
-}
-
-.order-tracking-info p:last-child {
-  margin-bottom: 0;
-  color: var(--text-muted);
-  font-size: 0.95rem;
-}
-
-/* Help Info */
-.help-info {
-  margin-top: 2.5rem;
-  padding: 1.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(212, 175, 55, 0.15);
-  border-radius: 12px;
-}
-
-.help-info p {
-  color: var(--text-muted);
-  margin-bottom: 0.5rem;
-  line-height: 1.6;
-}
-
-.help-info a {
-  color: var(--gold-accent);
-  text-decoration: none;
-  font-weight: 600;
-  transition: all 0.3s ease;
-}
-
-.help-info a:hover {
-  color: var(--gold-primary);
-  text-decoration: underline;
-}
-
-/* Error Message */
-.error-message {
-  color: var(--text-muted);
-  font-size: 1.1rem;
-  line-height: 1.8;
-  margin-bottom: 3rem;
-  padding: 1.5rem;
-  background: rgba(231, 76, 60, 0.1);
-  border: 1px solid rgba(231, 76, 60, 0.3);
-  border-radius: 10px;
-}
-
-/* Mobile Responsive */
-@media (max-width: 768px) {
-  .order-confirmation-section {
-    padding: 100px 1rem 2rem;
-  }
-
-  .order-confirmation {
-    padding: 2rem 1.5rem;
-  }
-
-  .confirmation-icon {
-    font-size: 4rem;
-    width: 100px;
-    height: 100px;
-    line-height: 100px;
-  }
-
-  .order-confirmation h2 {
-    font-size: 1.8rem;
-  }
-
-  .confirmation-message {
-    font-size: 1rem;
-  }
-
-  .confirmation-details {
-    padding: 1.5rem;
-  }
-
-  .detail-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.5rem;
-  }
-
-  .detail-item span {
-    max-width: 100%;
-    text-align: left;
-  }
-
-  .confirmation-actions {
-    flex-direction: column;
-  }
-
-  .confirmation-actions .btn {
-    width: 100%;
-    min-width: auto;
-  }
-
-  .order-item {
-    flex-direction: column;
-    text-align: center;
-  }
-
-  .order-item img {
-    width: 80px;
-    height: 80px;
-  }
-}
-
-/* Print Styles */
-@media print {
-  body * {
-    visibility: hidden;
-  }
-  
-  .order-confirmation,
-  .order-confirmation * {
-    visibility: visible;
-  }
-  
-  .order-confirmation {
-    position: absolute;
-    left: 0;
-    top: 0;
-    width: 100%;
-    box-shadow: none;
-    border: 1px solid #000;
-  }
-  
-  .confirmation-actions,
-  .navbar,
-  footer,
-  .order-tracking-info {
-    display: none !important;
-  }
-  
-  .confirmation-icon {
-    print-color-adjust: exact;
-    -webkit-print-color-adjust: exact;
-  }
-  
-  @page {
-    margin: 2cm;
-  }
-}

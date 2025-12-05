@@ -10,6 +10,7 @@ import { initProductFilters, initDiscoverMore, initProductAddToCart } from "./pr
 import { initCheckoutPage } from "./checkout.js";
 import { errorHandler } from "./error-handler.js";
 import { apiRateLimiter, userActionLimiter, inputSanitizer, Sanitizer } from "./security.js";
+import { initOrderConfirmation } from "./order-confirmation.js";
 
 // =========================
 // 🎯 Global Cart Instance
