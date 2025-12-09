@@ -16,9 +16,15 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 # Copy frontend files
 COPY . /usr/share/nginx/html
 
-# Create cache directory
+# Create cache directory and set proper permissions
 RUN mkdir -p /var/cache/nginx/client_temp && \
-    chown -R nginx:nginx /var/cache/nginx
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /usr/share/nginx/html && \
+    touch /var/run/nginx.pid && \
+    chown nginx:nginx /var/run/nginx.pid
+
+# Switch to non-root user
+USER nginx
 
 # Expose ports
 EXPOSE 80 443

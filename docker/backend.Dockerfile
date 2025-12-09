@@ -8,10 +8,12 @@
 # ==========================================
 FROM node:20-alpine AS base
 
-# Install system dependencies
-RUN apk add --no-cache \
+# Update packages and install security updates
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
     dumb-init \
-    curl
+    curl && \
+    rm -rf /var/cache/apk/*
 
 # Set working directory
 WORKDIR /app

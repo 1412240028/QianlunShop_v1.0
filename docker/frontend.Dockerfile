@@ -9,9 +9,10 @@ FROM nginx:alpine
 # ============================================
 # 📦 Install dependencies
 # ============================================
-RUN apk add --no-cache \
-    curl \
-    && rm -rf /var/cache/apk/*
+RUN apk update && apk upgrade && \
+    apk add --no-cache \
+    curl && \
+    rm -rf /var/cache/apk/*
 
 # ============================================
 # 📁 Copy nginx configuration
