@@ -18,92 +18,6 @@ import { initOrderConfirmation } from "./order-confirmation.js";
 const cart = new Cart();
 
 // =========================
-// 📦 Order Confirmation Page
-// =========================
-const getOrderData = () => {
-  const orderData = Utils.loadFromStorage('qianlunshop_last_order', null);
-
-  if (orderData) {
-    // Save to orders history
-    const orders = Utils.loadFromStorage('qianlunshop_orders', []);
-    orders.push({
-      ...orderData,
-      timestamp: Date.now()
-    });
-    Utils.saveToStorage('qianlunshop_orders', orders);
-
-    // JANGAN hapus last_order, set flag "viewed" saja
-    orderData.viewed = true;
-    Utils.saveToStorage('qianlunshop_last_order', orderData);
-  }
-
-  return orderData;
-};
-
-const clearCart = () => {
-  localStorage.removeItem(CONFIG.STORAGE_KEYS.CART);
-};
-
-const renderOrderConfirmation = () => {
-  const confirmationContainer = document.querySelector('.order-confirmation');
-
-  const orderDetails = getOrderData();
-
-  if (!orderDetails || !orderDetails.orderId) {
-    confirmationContainer.innerHTML = `
-      <div class="confirmation-icon error-icon" aria-hidden="true">❌</div>
-      <h2>Oops! Data Pesanan Tidak Ditemukan.</h2>
-      <p>Silakan kembali ke halaman produk untuk memulai pembelian.</p>
-      <div class="confirmation-actions">
-        <a href="../index.html" class="btn btn-primary">Kembali ke Beranda</a>
-      </div>
-    `;
-    return;
-  }
-
-  const confirmationHTML = `
-    <div class="confirmation-icon" aria-hidden="true">✓</div>
-    <h2>Pesanan Anda Telah Berhasil Dikonfirmasi!</h2>
-
-    <p class="order-id">
-      **ID Pesanan:** ${orderDetails.orderId}
-    </p>
-
-    <p>
-      Terima kasih telah berbelanja di QianlunShop. Kami telah mengirimkan detail pesanan lengkap ke alamat email **${orderDetails.customerEmail}**. Harap tunggu informasi pengiriman.
-    </p>
-
-    <div class="confirmation-details">
-      <div class="detail-item">
-        <strong>Tanggal Pesanan:</strong>
-        <span>${orderDetails.date}</span>
-      </div>
-      <div class="detail-item">
-        <strong>Metode Pembayaran:</strong>
-        <span>${orderDetails.paymentMethod}</span>
-      </div>
-      <div class="detail-item">
-        <strong>Alamat Pengiriman:</strong>
-        <span>${orderDetails.shippingAddress}</span>
-      </div>
-      <div class="detail-item">
-        <strong>Total Pembayaran:</strong>
-        <span>${Utils.formatPrice(orderDetails.total)}</span>
-      </div>
-    </div>
-
-    <div class="confirmation-actions">
-      <a href="../index.html" class="btn btn-primary">Kembali ke Beranda</a>
-      <a href="/tracking?id=${orderDetails.orderId}" class="btn btn-secondary">Lacak Pesanan</a>
-    </div>
-  `;
-
-  confirmationContainer.innerHTML = confirmationHTML;
-
-  clearCart();
-};
-
-// =========================
 // 📱 MOBILE MENU HANDLER
 // =========================
 function initMobileMenu() {
@@ -208,7 +122,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Initialize order confirmation only on order-confirmation page
   if (window.location.pathname.includes('order-confirmation.html')) {
-    renderOrderConfirmation();
+    initOrderConfirmation();
   }
 
   // Initialize order history only on order-history page
