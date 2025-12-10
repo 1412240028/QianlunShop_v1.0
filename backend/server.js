@@ -22,23 +22,7 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // ==========================================
 // 🗄️ Database Connection
 // ==========================================
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
-    
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error('❌ MongoDB Connection Error:', error.message);
-    process.exit(1);
-  }
-};
-
-// Connect to database
+const connectDB = require('./config/db');
 connectDB();
 
 // ==========================================
@@ -127,18 +111,7 @@ app.use((req, res, next) => {
 });
 
 // Global error handler
-app.use((err, req, res, next) => {
-  console.error('❌ Error:', err);
-
-  const statusCode = err.statusCode || 500;
-  const message = err.message || 'Internal Server Error';
-
-  res.status(statusCode).json({
-    success: false,
-    message: NODE_ENV === 'development' ? message : 'Something went wrong',
-    ...(NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
+app.use(errorHandler);
 
 // ==========================================
 // 🚀 Server Start
